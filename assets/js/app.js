@@ -146,7 +146,7 @@
       geo.H = H;
       // a tall phone screen shows more sky than the render has: the clouds get larger instead of repeating
       geo.skyZ = Math.max(1, (560 - (900 - (vh + geo.d0) * 1350 / W)) / 920);
-      setClass(header, 'under-trees', vh + geo.d0 - (900 + 266) * W / 1350 < 90);   // the top of the rowan's crown is at y -266
+      setClass(header, 'under-trees', vh + geo.d0 - (900 + 266) * W / 1350 < 62);   // the top of the rowan's crown is at y -266
       if (sky) sky.resize();
     };
 
