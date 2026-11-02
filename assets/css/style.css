@@ -694,14 +694,14 @@ html:not(.js) .bstep { position: static; opacity: 1; transform: none; margin-bot
   .scene .chip--b { top: 54%; left: -9%; }
   .moon { left: 70%; top: 3%; }
   /* the tree crown reaches the header on low screens: a soft haze keeps the dark logo and menu readable over it by day */
-  .header--over::before { content: ""; position: absolute; inset: 0 0 -26px; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .4s; background: linear-gradient(180deg, rgba(255, 255, 255, .8), rgba(255, 255, 255, .5) 60%, rgba(255, 255, 255, 0)); }
+  .header--over::before { content: ""; position: absolute; inset: 0 0 -4px; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .4s; background: linear-gradient(180deg, rgba(255, 255, 255, .8), rgba(255, 255, 255, .5) 60%, rgba(255, 255, 255, 0)); }
   .header--over.under-trees:not(.is-past):not(.is-night):not(.is-dusk)::before { opacity: 1; }
 }
 @media (min-width: 900px) and (max-width: 1240px) and (min-aspect-ratio: 13/10) {
   .moon { left: 62%; }
 }
 @media (min-width: 900px) and (min-aspect-ratio: 13/10) and (max-height: 860px) {
-  .hero__copy { top: 78px; }
+  .hero__copy { top: 86px; }
   .hero__lead, .hero .eyebrow { display: none; }
 }
 
