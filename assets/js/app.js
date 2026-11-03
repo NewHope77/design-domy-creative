@@ -194,7 +194,8 @@
       setClass(hero, 'is-night', night);
       setClass(header, 'is-night', night);
       setClass(header, 'is-dusk', e > .08);
-      setClass(caption, 'show', p > .8);
+      // gone before the scene scrolls away, so it never passes under the logo and the menu
+      setClass(caption, 'show', p > .8 && window.scrollY < geo.range + 8);
       if (view.n !== e || view.d !== d) {
         view.n = e; view.d = d;
         if (sky) sky.draw();
