@@ -114,39 +114,55 @@
     var landscape = window.matchMedia('(min-width: 900px) and (min-aspect-ratio: 13/10)');
     var view = { n: forced, d: 0 };   // what the shader has to match
     var LOWEST = 990;                 // the painted ground ends here, in the render's coordinates
+    var upright = window.matchMedia('(max-aspect-ratio: 4/5)');
+    var skyDay = $('.sky__day', hero);
 
     var measure = function () {
       var vw = window.innerWidth, vh = pin.clientHeight;
-      var phone = vw <= 640;
-      var W, H;
+      var was = parseFloat(copy.style.marginTop) || 0;
+      var copyBottom = copy.offsetTop - was + copy.offsetHeight;
+      var margin = 0, W, s;
       if (landscape.matches) {
         // the whole house from the first moment: the ridge (y 51) just under the buttons, the garden around it as far as the screen goes.
         // The scene (2400 wide) always fills the screen; on a very low screen only the foreground runs past the bottom, never the house
-        var room = vh - (copy.offsetTop + copy.offsetHeight + 12);
-        var s = Math.max(room / (LOWEST - 51), vw / 2400);
+        var room = vh - (copyBottom + 12);
+        s = Math.max(room / (LOWEST - 51), vw / 2400);
         W = s * 1350;
-        H = W * 860 / 1350;
-        scene.style.setProperty('--sw', W.toFixed(1) + 'px');
         geo.d0 = geo.d1 = (900 - Math.min(LOWEST, 51 + room / s)) * s;
       } else {
-        W = phone ? vw * 1.22 : Math.min(vw, Math.max(vh * 1.95, 1100));
-        H = W * 860 / 1350;
-        scene.style.setProperty('--sw', W.toFixed(1) + 'px');
-        var ctaBottom = copy.offsetTop + copy.offsetHeight;
+        // upright screens: the house fills the width, only the garden edges run past the screen
+        W = vw <= 640 || upright.matches ? vw * 1.22 : Math.min(vw, Math.max(vh * 1.95, 1100));
+        s = W / 1350;
         // at the start the roof sits just under the buttons; at the end the house is whole, right below the header.
         // A tall screen shows more of the ground below the render
-        var below = (900 - LOWEST) * W / 1350;
-        var startTop = ctaBottom + 14 - (95 - 40) * W / 1350;
-        geo.d0 = Math.max(below, startTop + H - vh);
-        geo.d1 = Math.max(below, Math.min(geo.d0, (phone ? 70 : 62) + H - vh));
+        var below = (900 - LOWEST) * s;
+        var overflow = copyBottom + 10 + 849 * s - vh;
+        geo.d0 = Math.max(below, overflow);
+        geo.d1 = Math.max(below, Math.min(geo.d0, (vw <= 640 ? 70 : 62) + 860 * s - vh));
+        // what is left of the sky goes above and below the text, so the text does not hang under the header with a hole beneath it
+        margin = Math.max(0, (vh + geo.d0 - 849 * s - copyBottom - 30) * .42);
       }
+      if (margin !== was) copy.style.marginTop = margin ? margin.toFixed(1) + 'px' : '';
+      var H = 860 * s;
+      scene.style.setProperty('--sw', W.toFixed(1) + 'px');
+      // the plain sky under the land, until the shader takes over: in place on a wide screen, only its real sky on an upright one (CSS)
+      skyDay.style.backgroundSize = landscape.matches ? (2400 * s).toFixed(0) + 'px auto' : '';
+      skyDay.style.backgroundPosition = landscape.matches ? '50% ' + (vh + geo.d0 - 1260 * s).toFixed(0) + 'px' : '';
       geo.range = Math.max(1, hero.offsetHeight - vh);
       geo.bottom = hero.offsetTop + hero.offsetHeight;
       geo.vw = vw; geo.vh = vh; geo.W = W;
       geo.H = H;
-      // a tall phone screen shows more sky than the render has: the clouds get larger instead of repeating
-      geo.skyZ = Math.max(1, (560 - (900 - (vh + geo.d0) * 1350 / W)) / 920);
-      setClass(header, 'under-trees', vh + geo.d0 - (900 + 266) * W / 1350 < 62);   // the top of the rowan's crown is at y -266
+      // a tall screen shows more sky than the picture has (it ends at y -360): higher up the clouds grow to fill it, as overhead in a real sky.
+      // Below y 40 nothing changes, so what is hidden behind the house never comes into view
+      var high = 40 - (900 - (vh + geo.d0) / s), lo = 0, hi = 1;
+      if (high > 400) {
+        for (var i = 0; i < 30; i++) {
+          var k = (lo + hi) / 2, z = 1 + 150 * k;
+          if (Math.log(z) / k + (high - 150) / z > 400) lo = k; else hi = k;
+        }
+      }
+      geo.skyK = high > 400 ? hi : 0;
+      setClass(header, 'under-trees', vh + geo.d0 - (900 + 266) * s < 62);   // the top of the rowan's crown is at y -266
       if (sky) sky.resize();
     };
 
@@ -196,7 +212,7 @@
       var VS = 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
       var FS = [
         '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
-        'uniform sampler2D uLandD,uLandN,uSky,uWind;uniform vec2 uRes;uniform float uDpr,uScale,uCx,uBottom,uTime,uN,uZ;',
+        'uniform sampler2D uLandD,uLandN,uSky,uWind;uniform vec2 uRes;uniform float uDpr,uScale,uCx,uBottom,uTime,uN,uK;',
         'float mir(float x){return abs(mod(x+1.,2.)-1.);}',
         'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
         'void main(){',
@@ -209,7 +225,8 @@
         ' float dk=smoothstep(.1,.66,uN);',   // the same moment as the house on top
         ' vec4 l=mix(texture2D(uLandD,luv),texture2D(uLandN,luv),dk);',
         ' if(uv.y<0.)l=vec4(0.);',
-        ' vec2 sp=vec2((f.x-675.)/uZ+675.,560.-(560.-f.y)/uZ);',
+        ' float h=max(0.,40.-f.y),hr=min(h,150.),z=1.+uK*hr;',
+        ' vec2 sp=vec2((f.x-675.)/z+675.,uK>0.&&h>0.?40.-log(z)/uK-(h-hr)/z:f.y);',
         ' vec3 k=texture2D(uSky,vec2(mir((sp.x+525.+uTime*5.)/2400.),mir((sp.y+360.)/1350.))).rgb;',
         ' float cl=smoothstep(.5,.86,dot(k,vec3(.3,.59,.11)));',                 // the real clouds stay and change colour with the rest
         ' float hz=smoothstep(-160.,540.,sp.y);',
@@ -236,7 +253,7 @@
       gl.enableVertexAttribArray(aLoc);
       gl.vertexAttribPointer(aLoc, 2, gl.FLOAT, false, 0, 0);
       var U = {};
-      ['uRes', 'uDpr', 'uScale', 'uCx', 'uBottom', 'uTime', 'uN', 'uZ', 'uLandD', 'uLandN', 'uSky', 'uWind'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+      ['uRes', 'uDpr', 'uScale', 'uCx', 'uBottom', 'uTime', 'uN', 'uK', 'uLandD', 'uLandN', 'uSky', 'uWind'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
       var ready = false, time = 0, lastT = 0, running = false, animOff = reduced, skip = false;
       var phone = window.innerWidth <= 640;
       var dprMax = phone ? 1.25 : 1.5, dpr = 1;
@@ -269,7 +286,7 @@
         gl.uniform1f(U.uBottom, geo.vh + view.d);
         gl.uniform1f(U.uTime, time);
         gl.uniform1f(U.uN, view.n);
-        gl.uniform1f(U.uZ, geo.skyZ);
+        gl.uniform1f(U.uK, geo.skyK);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
       }
       function tick(t) {
