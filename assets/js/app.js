@@ -120,6 +120,7 @@
     var measure = function () {
       var vw = window.innerWidth, vh = pin.clientHeight;
       var was = parseFloat(copy.style.marginTop) || 0;
+      var claim = $('.header__claim').offsetHeight;
       var copyBottom = copy.offsetTop - was + copy.offsetHeight;
       var margin = 0, W, s;
       if (landscape.matches) {
@@ -138,7 +139,7 @@
         var below = (900 - LOWEST) * s;
         var overflow = copyBottom + 10 + 849 * s - vh;
         geo.d0 = Math.max(below, overflow);
-        geo.d1 = Math.max(below, Math.min(geo.d0, (vw <= 640 ? 70 : 62) + 860 * s - vh));
+        geo.d1 = Math.max(below, Math.min(geo.d0, (vw <= 640 ? 70 : 62) + claim + 860 * s - vh));
         // what is left of the sky goes above and below the text, so the text does not hang under the header with a hole beneath it
         margin = Math.max(0, (vh + geo.d0 - 849 * s - copyBottom - 30) * .42);
       }
@@ -162,7 +163,7 @@
         }
       }
       geo.skyK = high > 400 ? hi : 0;
-      setClass(header, 'under-trees', vh + geo.d0 - (900 + 266) * s < 62);   // the top of the rowan's crown is at y -266
+      setClass(header, 'under-trees', vh + geo.d0 - (900 + 266) * s < 62 + claim);   // the top of the rowan's crown is at y -266
       if (sky) sky.resize();
     };
 
